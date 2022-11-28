@@ -4,10 +4,8 @@ const { body, validationResult } = require('express-validator');
 
 const router = express.Router();
 
-
 router.post('/',
     body('title').isString(),
-    body('publishDate').isDate(),
     body('author').isString(),
     body('cover').isString(),
     body('subject').isString(),
@@ -19,9 +17,13 @@ router.post('/',
                 return res.status(400).json({ errors: errors.array() });
             }
 
+            console.log(req.body)
+
             const dia = req.body.publishDate.split('/')[0];
             const mes = req.body.publishDate.split('/')[1];
             const ano = req.body.publishDate.split('/')[2];
+
+            console.log(new Date(`${mes}/${dia}/${ano}`))
 
             const book = await Book.create({...req.body, publishDate: new Date(`${mes}/${dia}/${ano}`)});
 
@@ -32,9 +34,17 @@ router.post('/',
 });
 
 router.get('/', async (req, res) => {
-    const users = await Book.find();
-
-    return res.send(users);
+    return res.send(await Book.find().then(it => {
+            return it.map(it => { return {
+                _id: it.id,
+                title: it.title,
+                publishDate: it.publishDate.toLocaleDateString("pt-BR"),
+                author: it.author,
+                cover: it.cover,
+                subject: it.subject
+            }
+        })
+    }));
 });
 
 router.get('/:id', async (req, res) => {
@@ -65,6 +75,11 @@ router.get('/:id', async (req, res) => {
 });
 
 router.put('/:id', async (req, res) => {
+
+    req.body.publishDate = `${req.body.publishDate.split("/")[1]}/${req.body.publishDate.split("/")[0]}/${req.body.publishDate.split("/")[2]}`
+
+    console.log(req.body)
+
     Book.findByIdAndUpdate(req.params.id, req.body, async (err, doc) => {
         if (err) return res.send({ error: err });
         return res.send({
